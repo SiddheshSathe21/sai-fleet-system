@@ -1,0 +1,20 @@
+# ── Netlify Configuration ─────────────────────────────────────────
+# Shri Sai Enterprizes — Fleet Management System
+# ──────────────────────────────────────────────────────────────────
+
+[build]
+  publish = "."        # All files are in the root folder
+
+# Redirect all routes to index.html (needed for single-page apps)
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options        = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"

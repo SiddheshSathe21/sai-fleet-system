@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shri Sai Enterprizes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Netlify Identity Widget — handles all auth server-side -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" defer></script>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN (shown until Netlify Identity confirms auth) ── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><img src="logo-removebg-preview.png" alt=""></div>
+    <div class="login-title">Shri Sai Enterprizes</div>
+    <div class="login-sub">Transportation Management &mdash; Staff Portal</div>
+    <div id="login-checking" class="login-checking">
+      <div class="login-spinner"></div>
+      <div class="login-checking-txt">Checking authentication&hellip;</div>
+    </div>
+    <div id="login-action" style="display:none">
+      <button class="login-btn" onclick="netlifyIdentity.open()">
+        &#x1F511; Sign In
+      </button>
+      <div class="login-footer">Authorised access only &mdash; invite required</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN APP (hidden until Netlify Identity confirms login) ───── -->
+<div id="main-app" style="display:none">
+
+<!-- ── HEADER ─────────────────────────────────────────────────── -->
+<header>
+  <div class="hl">
+    <span style="font-size:20px"><img src="logo-removebg-preview.png" alt="" height="61px"></span>
+    <div>
+      <div class="ht">Shri Sai Enterprizes</div>
+      <div class="hs">Transportation Management</div>
+    </div>
+  </div>
+  <div class="hr">
+    <div class="clock" id="clock"></div>
+    <button class="btn btn-p btn-sm" onclick="openAdd()">
+      <span style="font-size:16px;line-height:1;font-weight:700">+</span>
+      <span class="btn-lbl">Add Vehicle</span>
+    </button>
+    <button class="icn-btn" onclick="openSettings()" title="Settings">&#9881;&#65039;</button>
+    <button class="thm-btn" onclick="toggleTheme()">
+      <span id="t-icon">&#x1F319;</span>
+      <span class="thm-txt" id="t-lbl">Dark</span>
+    </button>
+    <button class="logout-btn" onclick="doLogout()" title="Sign out">
+      <span id="user-email" style="margin-right:4px;font-size:11px;opacity:.8"></span>
+      &#x23FB; Logout
+    </button>
+  </div>
+</header>
+
+<!-- ── MAIN PAGE ───────────────────────────────────────────────── -->
+<div class="page">
+
+  <!-- Reminder Banner -->
+  <div class="rem-banner" id="rem-banner">
+    <div class="rem-title">&#x23F0; <span id="rem-txt">Documents expiring soon</span></div>
+    <div class="rem-items" id="rem-items"></div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats" id="stats"></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="tb-title">
+      All Vehicles
+      <span id="v-count" style="font-size:12px;font-weight:500;color:var(--text-muted);margin-left:5px"></span>
+    </div>
+    <div class="tb-right">
+      <input type="text" id="search" placeholder="Search vehicle&#x2026;" oninput="renderTable()">
+      <div class="seg">
+        <button class="seg-btn active" onclick="setFilter('all',this)">All</button>
+        <button class="seg-btn" onclick="setFilter('expired',this)">Expired</button>
+        <button class="seg-btn" onclick="setFilter('critical',this)">Critical</button>
+        <button class="seg-btn" onclick="setFilter('ok',this)">Healthy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vehicles Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Vehicle</th>
+          <th class="tc">Fitness</th>
+          <th class="tc">Tax</th>
+          <th class="tc">Insurance</th>
+          <th class="tc">PUCC</th>
+          <th class="tc">Permit</th>
+          <th class="tc">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Expired / Expiring Soon Panels -->
+  <div class="panels">
+    <div class="panel">
+      <div class="ph">
+        <div class="pdot" style="background:#c0392b"></div>
+        Expired Documents
+      </div>
+      <div class="pb" id="exp-list"></div>
+    </div>
+    <div class="panel">
+      <div class="ph">
+        <div class="pdot" style="background:#c2710c"></div>
+        Expiring Soon
+        <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:4px">within 90 days</span>
+      </div>
+      <div class="pb" id="upc-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── VIEW MODAL ──────────────────────────────────────────────── -->
+<div class="ov" id="view-ov" onclick="closeView(event)">
+  <div class="modal">
+    <div class="mhd">
+      <div>
+        <div class="mtitle" id="v-vid"></div>
+        <div class="msub" id="v-sub"></div>
+      </div>
+      <button class="mcl" onclick="closeView()">&#x2715;</button>
+    </div>
+    <div class="vsum" id="v-sum"></div>
+    <div class="dgrid" id="v-grid"></div>
+    <button class="veditbtn" onclick="switchToEdit()">&#x270F;&#xFE0F; Edit Vehicle Details</button>
+  </div>
+</div>
+
+<!-- ── ADD / EDIT MODAL ────────────────────────────────────────── -->
+<div class="ov" id="form-ov" onclick="closeForm(event)">
+  <div class="modal">
+    <div class="mhd">
+      <div>
+        <div class="mtitle" id="form-title">Add New Vehicle</div>
+        <div class="msub" id="form-sub">Enter vehicle details and document expiry dates</div>
+        <div class="edit-badge" id="edit-badge">&#x270F;&#xFE0F; Edit Mode</div>
+      </div>
+      <button class="mcl" onclick="closeForm()">&#x2715;</button>
+    </div>
+
+    <!-- Vehicle Info -->
+    <div class="fsec">
+      <div class="fslbl">Vehicle Information</div>
+      <div class="frow">
+        <div class="ff">
+          <label class="flbl">Vehicle Number <span class="req">*</span></label>
+          <input type="text" id="f-id" placeholder="e.g. MH04GC0366" oninput="clrE('f-id')" autocomplete="off">
+          <div class="ferr" id="e-f-id">Enter a valid vehicle number</div>
+        </div>
+        <div class="ff">
+          <label class="flbl">Registration Date <span class="req">*</span></label>
+          <input type="date" id="f-reg" oninput="clrE('f-reg')">
+          <div class="ferr" id="e-f-reg">Select a registration date</div>
+        </div>
+      </div>
+      <div class="frow full">
+        <div class="ff">
+          <label class="flbl">Owner Email <span class="req">*</span> <span class="hint">&#x2014; for expiry reminders</span></label>
+          <input type="email" id="f-email" placeholder="owner@example.com" oninput="clrE('f-email')" autocomplete="off">
+          <div class="ferr" id="e-f-email">Enter a valid email address</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Dates -->
+    <div class="fsec">
+      <div class="fslbl">Document Expiry Dates</div>
+      <div class="frow">
+        <div class="ff">
+          <label class="flbl">Fitness Valid Upto <span class="req">*</span></label>
+          <input type="date" id="f-fitness" oninput="clrE('f-fitness')">
+          <div class="ferr" id="e-f-fitness">Required</div>
+        </div>
+        <div class="ff">
+          <label class="flbl">Tax Valid Upto <span class="req">*</span></label>
+          <input type="date" id="f-tax" oninput="clrE('f-tax')">
+          <div class="ferr" id="e-f-tax">Required</div>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="ff">
+          <label class="flbl">Insurance Valid Upto <span class="req">*</span></label>
+          <input type="date" id="f-insurance" oninput="clrE('f-insurance')">
+          <div class="ferr" id="e-f-insurance">Required</div>
+        </div>
+        <div class="ff">
+          <label class="flbl">PUCC Valid Upto <span class="req">*</span></label>
+          <input type="date" id="f-pucc" oninput="clrE('f-pucc')">
+          <div class="ferr" id="e-f-pucc">Required</div>
+        </div>
+      </div>
+      <div class="frow full">
+        <div class="ff">
+          <label class="flbl">Permit Valid Upto <span class="req">*</span></label>
+          <input type="date" id="f-permit" oninput="clrE('f-permit')">
+          <div class="ferr" id="e-f-permit">Required</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ffoot">
+      <button class="btn btn-g" onclick="closeForm()">Cancel</button>
+      <button class="btn btn-p" id="form-submit" onclick="submitForm()">Add Vehicle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SETTINGS MODAL ──────────────────────────────────────────── -->
+<div class="ov" id="set-ov" onclick="closeSettings(event)">
+  <div class="modal">
+    <div class="mhd">
+      <div>
+        <div class="mtitle">&#x2699;&#xFE0F; Settings</div>
+        <div class="msub">Email reminders &amp; system options</div>
+      </div>
+      <button class="mcl" onclick="closeSettings()">&#x2715;</button>
+    </div>
+
+    <!-- EmailJS Setup Guide -->
+    <div class="sinfo">
+      <b>Email reminder setup (optional):</b><br>
+      1. Sign up free at <a href="https://www.emailjs.com" target="_blank" rel="noopener">emailjs.com</a><br>
+      2. Create an <b>Email Service</b> (Gmail/Outlook) &rarr; copy <b>Service ID</b><br>
+      3. Create an <b>Email Template</b> with variables:
+         <code>{{vehicle_id}}</code> <code>{{owner_email}}</code>
+         <code>{{doc_list}}</code> <code>{{days_left}}</code> &rarr; copy <b>Template ID</b><br>
+      4. Go to <b>Account &rarr; Public Key</b> and paste all three below, then Save.
+    </div>
+
+    <!-- EmailJS Fields -->
+    <div class="fsec">
+      <div class="frow full">
+        <div class="ff">
+          <label class="flbl">EmailJS Public Key</label>
+          <input type="text" id="s-pk" placeholder="e.g. user_xxxxxxxxxxxx" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow">
+        <div class="ff">
+          <label class="flbl">Service ID</label>
+          <input type="text" id="s-svc" placeholder="e.g. service_abc123" autocomplete="off">
+        </div>
+        <div class="ff">
+          <label class="flbl">Template ID</label>
+          <input type="text" id="s-tpl" placeholder="e.g. template_xyz789" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow full">
+        <div class="ff">
+          <label class="flbl">Reminder threshold (days before expiry)</label>
+          <input type="number" id="s-days" value="5" min="1" max="30" style="width:80px">
+        </div>
+      </div>
+    </div>
+
+    <div class="ssaved" id="ssaved">&#x2713; Settings saved</div>
+    <div class="ffoot">
+      <button class="btn btn-g btn-sm" onclick="testEmail()">Send Test Email</button>
+      <button class="btn btn-p btn-sm" onclick="saveSettings()">Save Settings</button>
+    </div>
+
+    <!-- Advanced / Danger Zone (hidden, subtle link) -->
+    <span class="dz-link" id="dz-link" onclick="toggleDZ()">&#x2699; Advanced Options</span>
+    <div class="dz-box" id="dz-box">
+      <div class="dz-ttl">&#x26A0;&#xFE0F; Danger Zone &mdash; Remove Vehicle</div>
+      <div class="dz-desc">
+        Permanently removes a vehicle and <b>all</b> its document records.
+        <b style="color:var(--danger)">This cannot be undone.</b>
+      </div>
+
+      <!-- Step 1: Select -->
+      <div class="dz-lbl">Step 1 &mdash; Select vehicle</div>
+      <select class="dz-sel" id="dz-sel" onchange="dzStep1()">
+        <option value="">-- choose a vehicle --</option>
+      </select>
+
+      <!-- Step 2: Type to confirm -->
+      <div class="dz-step" id="dz-s2">
+        <div class="dz-step-lbl">
+          Step 2 &mdash; Type
+          <b id="dz-confirm-lbl" style="font-family:monospace;color:var(--danger);background:rgba(192,57,43,.08);padding:1px 6px;border-radius:3px;font-size:13px"></b>
+          exactly to confirm
+        </div>
+        <input class="dz-inp" type="text" id="dz-inp"
+          placeholder="Type vehicle number exactly"
+          oninput="dzStep2()" autocomplete="off" spellcheck="false">
+        <div class="dz-err" id="dz-err">&#x2715; Does not match &mdash; type exactly as shown</div>
+      </div>
+
+      <!-- Step 3: Final button -->
+      <div class="dz-warn" id="dz-warn">
+        &#x26A0; Step 3 &mdash; <b>Final confirmation.</b>
+        <span id="dz-warn-id"></span> and all its records will be <b>permanently deleted</b>.
+        The button will activate in 2 seconds.
+      </div>
+      <button class="dz-btn" id="dz-btn" onclick="dzExecute()">
+        Remove Vehicle Permanently
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+</div><!-- /#main-app -->
+
+<!-- Script (must be after DOM) -->
+<script src="script.js"></script>
+
+</body>
+</html>

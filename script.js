@@ -6,18 +6,23 @@
    Netlify Dashboard → Site → Identity → Users
    ═══════════════════════════════════════════════════════════════════ */
 
+// Always start with app hidden — never show until auth confirmed
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('main-app').style.display    = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+});
+
 function showApp(user) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display     = 'block';
-  // Show logged-in user's email in header
   const emailEl = document.getElementById('user-email');
   if (emailEl && user && user.email) emailEl.textContent = user.email;
   init();
 }
 
 function showLogin() {
-  document.getElementById('main-app').style.display     = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display      = 'none';
+  document.getElementById('login-screen').style.display  = 'flex';
   document.getElementById('login-checking').style.display = 'none';
   document.getElementById('login-action').style.display   = 'block';
 }
@@ -26,17 +31,28 @@ function doLogout() {
   netlifyIdentity.logout();
 }
 
-// Boot — check if user is already logged in
+// Boot
 window.addEventListener('load', () => {
-  // netlifyIdentity must be loaded first
   if (typeof netlifyIdentity === 'undefined') {
-    // Fallback if widget fails to load (e.g. no internet)
     showLogin();
     return;
   }
 
+  // ── FIX: detect invite / password-recovery token in URL ──────────
+  // When client clicks the invite email link, the URL contains
+  // #invite_token=xxx or #recovery_token=xxx
+  // We must open the widget immediately so they can set their password
+  const hash = window.location.hash;
+  if (hash && (hash.includes('invite_token=') || hash.includes('recovery_token='))) {
+    // Let the widget handle the token — it will open automatically
+    netlifyIdentity.on('init', () => {
+      netlifyIdentity.open();
+    });
+  }
+
   netlifyIdentity.on('init', user => {
     if (user) {
+      // Already logged in from a previous session
       showApp(user);
     } else {
       // Not logged in — show Sign In button
@@ -46,7 +62,10 @@ window.addEventListener('load', () => {
   });
 
   netlifyIdentity.on('login', user => {
+    // After invite accepted OR normal login — close widget, show app
     netlifyIdentity.close();
+    // Clear the token from URL so it's not reused
+    history.replaceState(null, '', window.location.pathname);
     showApp(user);
   });
 

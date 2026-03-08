@@ -38,18 +38,6 @@ window.addEventListener('load', () => {
     return;
   }
 
-  // ── FIX: detect invite / password-recovery token in URL ──────────
-  // When client clicks the invite email link, the URL contains
-  // #invite_token=xxx or #recovery_token=xxx
-  // We must open the widget immediately so they can set their password
-  const hash = window.location.hash;
-  if (hash && (hash.includes('invite_token=') || hash.includes('recovery_token='))) {
-    // Let the widget handle the token — it will open automatically
-    netlifyIdentity.on('init', () => {
-      netlifyIdentity.open();
-    });
-  }
-
   netlifyIdentity.on('init', user => {
     if (user) {
       // Already logged in from a previous session
@@ -58,13 +46,21 @@ window.addEventListener('load', () => {
       // Not logged in — show Sign In button
       document.getElementById('login-checking').style.display = 'none';
       document.getElementById('login-action').style.display   = 'block';
+
+      // ── Handle invite & recovery tokens in URL ───────────────────
+      // Netlify widget detects #invite_token and #recovery_token
+      // automatically — we just need to open the widget so it can
+      // process the token and show the set-password form
+      const hash = window.location.hash;
+      if (hash && (hash.includes('invite_token=') || hash.includes('recovery_token='))) {
+        netlifyIdentity.open();
+      }
     }
   });
 
   netlifyIdentity.on('login', user => {
-    // After invite accepted OR normal login — close widget, show app
     netlifyIdentity.close();
-    // Clear the token from URL so it's not reused
+    // Clear the token from URL so it's not reused on refresh
     history.replaceState(null, '', window.location.pathname);
     showApp(user);
   });
